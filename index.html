@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ink Atelier</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="splash" id="splash">
+  <img src="icon.png" class="splash-icon" alt="">
+  <div class="splash-title">Ink Atelier</div>
+  <div class="splash-sub">by Ink Inc.</div>
+  <div class="splash-bar-bg"><div class="splash-bar-fill" id="splash-bar"></div></div>
+  <div class="splash-sub" id="splash-msg">接続確認中...</div>
+</div>
+
+<!-- LOCK -->
+<div class="lock-overlay" id="lock-overlay">
+  <img src="icon.png" class="lock-icon" alt="">
+  <div class="lock-title">Ink Atelier</div>
+  <div class="lock-subtitle">生成中です。しばらくお待ちください...</div>
+  <div class="lock-progress-wrap">
+    <div class="lock-progress-bg"><div class="lock-progress-fill" id="lock-progress-fill"></div></div>
+    <div class="lock-progress-text" id="lock-progress-text">接続中...</div>
+    <div class="lock-counter" id="lock-counter" style="display:none;margin-top:4px;"><span id="lock-counter-text">1 / 1</span></div>
+  </div>
+  <div class="lock-elapsed"><span class="lock-elapsed-label">経過時間</span>：<span id="lock-elapsed-val">0.0s</span></div>
+  <button id="lock-abort-btn" class="lock-abort-btn" onclick="abortGenerate()">■ 中止</button></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">IMAGE</span>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body">
+      <img class="modal-img" id="modal-img" alt="">
+      <div class="modal-resize-row">
+        <div><label>W (px)</label><input type="number" id="modal-resize-w" placeholder="そのまま"></div>
+        <div><label>H (px)</label><input type="number" id="modal-resize-h" placeholder="そのまま"></div>
+        <button class="btn-action primary" onclick="downloadModalResized()" style="height:34px;margin-top:20px;">📐 保存</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-action primary" onclick="downloadModal()">💾 ダウンロード</button>
+        <button class="btn-action" onclick="reusePrompt()" id="modal-reuse-btn">↩ プロンプト再利用</button>
+        <button class="btn-action" onclick="hideGalleryItem()" style="border-color:var(--red);color:var(--red);">✕ 非表示</button>
+      </div>
+      <div id="modal-prompt-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <img src="icon.png" class="header-icon" alt="">
+    <div class="logo">Ink Atelier<span>by Ink Inc.</span></div>
+  </div>
+  <div class="header-right">
+    <div class="header-stats">
+      <div class="stat-badge">Models <span id="model-count">—</span></div>
+      <div class="stat-badge">LoRA <span id="lora-count">—</span></div>
+      <div class="stat-badge">Stock <span id="stock-count">—</span></div>
+      <div class="stat-badge">LLM <span id="llm-count">—</span></div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">接続確認中...</span>
+    </div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" id="tab-btn-generate" onclick="switchTab('generate',this)">Generate</button>
+  <button class="tab-btn" id="tab-btn-gallery" onclick="switchTab('gallery',this)">Gallery</button>
+  <button class="tab-btn" id="tab-btn-notes" onclick="switchTab('notes',this)">Prompt Notes</button>
+  <button class="tab-btn" id="tab-btn-schedule" onclick="switchTab('schedule',this)">Schedule</button>
+  <button class="tab-btn" id="tab-btn-library" onclick="switchTab('library',this)">Library</button>
+</div>
+
+<!-- GENERATE TAB -->
+<div class="tab-content active" id="tab-generate">
+  <div class="main">
+    <div class="panel-left">
+      <div class="section">
+        <div class="section-title">
+          LLM
+          <span class="ollama-status" id="ollama-status-side" title="Ollama">●</span>
+        </div>
+        <div class="field-row">
+          <label>翻訳モデル</label>
+          <select id="ollama-model-select" onchange="saveOllamaSettings()">
+            <option value="">読み込み中...</option>
+          </select>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Format</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;">
+          <button class="format-btn" id="fmt-tachie" onclick="applyFormat('tachie')">
+            <div class="format-btn-icon">🖼</div>
+            <div class="format-btn-name">立ち絵</div>
+            <div class="format-btn-detail">768×1152<br>Size only</div>
+          </button>
+          <button class="format-btn" id="fmt-sd" onclick="applyFormat('sd')">
+            <div class="format-btn-icon">🐣</div>
+            <div class="format-btn-name">SD</div>
+            <div class="format-btn-detail">600×600<br>Size only</div>
+          </button>
+          <button class="format-btn" id="fmt-illust_v" onclick="applyFormat('illust_v')">
+            <div class="format-btn-icon">🎨</div>
+            <div class="format-btn-name">一枚絵 縦</div>
+            <div class="format-btn-detail">832×1216<br>Size only</div>
+          </button>
+          <button class="format-btn" id="fmt-illust_h" onclick="applyFormat('illust_h')">
+            <div class="format-btn-icon">🏞</div>
+            <div class="format-btn-name">一枚絵 横</div>
+            <div class="format-btn-detail">1216×832<br>Size only</div>
+          </button>
+        </div>
+      </div>
+      <div class="section" id="builder-section">
+        <div class="section-title">Prompt Builder</div>
+        <div class="field-row">
+          <label>キャラ</label>
+          <select id="builder-chara" onchange="onBuilderCharaChange()">
+            <option value="">── 選択してください ──</option>
+          </select>
+        </div>
+        <div class="field-row" style="margin-top:8px;">
+          <div class="prompt-label-row">
+            <label>イベント / テーマ <span style="font-size:.6rem;color:var(--ink-500);">（省略可）</span></label>
+            <button class="btn-translate" onclick="translatePrompt('builder-event')" title="日本語→英語に変換">🇯🇵 → EN</button>
+          </div>
+          <textarea id="builder-event" rows="2" placeholder="例: チョコを持って、照れた表情　または　holding chocolate, blushing" style="resize:vertical;"></textarea>
+        </div>
+        <!-- タグライブラリボタンエリア -->
+        <div id="tag-library-area" style="margin-top:8px;"></div>
+        <button class="btn-builder-apply" onclick="applyBuilder()">▶ Generateに反映</button>
+      </div>
+      <div class="section">
+        <div class="section-title">Model</div>
+        <div class="field-row">
+          <label>Checkpoint</label>
+          <select id="checkpoint-select"><option value="">読み込み中...</option></select>
+        </div>
+        <div class="field-row">
+          <label>LoRA（任意）</label>
+          <select id="lora-select"><option value="">なし</option></select>
+        </div>
+        <div class="lora-strength-row" id="lora-strength-row" style="display:none;">
+          <input type="range" id="lora-strength" min="0" max="2" step="0.05" value="0.8">
+          <div class="lora-val" id="lora-strength-display">0.80</div>
+        </div>
+        <button id="fmt-clear-btn" style="display:none;margin-top:8px;width:100%;padding:6px;background:transparent;border:1px solid var(--ink-600);border-radius:4px;color:var(--ink-400);font-family:'JetBrains Mono',monospace;font-size:.68rem;cursor:pointer;" onclick="clearFormat()">✕ フォーマット解除（手動設定に戻す）</button>
+      </div>
+      <div class="section">
+        <div class="section-title">Prompt
+          <span class="ollama-status" id="ollama-status" title="Ollama接続状態">●</span>
+        </div>
+        <div class="field-row">
+          <div class="prompt-label-row">
+            <label>Positive</label>
+            <button class="btn-translate" onclick="translatePrompt('positive-prompt')" title="日本語→英語に変換">🇯🇵 → EN</button>
+          </div>
+          <textarea id="positive-prompt" rows="5" placeholder="日本語で書いて翻訳ボタンを押す、または英語タグを直接入力"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="prompt-label-row">
+            <label>Negative</label>
+            <button class="btn-translate" onclick="translatePrompt('negative-prompt')" title="日本語→英語に変換">🇯🇵 → EN</button>
+          </div>
+          <textarea id="negative-prompt" rows="3" placeholder="除外したい要素を入力（例：低品質、手の崩れ、余分な指など）"></textarea>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Reference</div>
+        <div class="ref-upload-area" id="ref-upload-area">
+          <input type="file" id="ref-input" accept="image/*" onchange="onRefChange(event)">
+          <div class="ref-placeholder" id="ref-placeholder">
+            <div class="ref-icon">🖼️</div>
+            <div>ドロップ または クリック</div>
+          </div>
+          <img id="ref-preview" alt="reference">
+        </div>
+        <button class="ref-clear" id="ref-clear" onclick="clearRef()">✕ リファレンスを削除</button>
+        <div id="ref-resize-wrap" style="display:none;">
+          <label style="margin-top:8px;">リサイズして使用（px）</label>
+          <div class="ref-resize-row">
+            <input type="number" id="ref-resize-w" placeholder="W">
+            <input type="number" id="ref-resize-h" placeholder="H">
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Size</div>
+        <div class="size-grid">
+          <button class="size-btn" data-w="512" data-h="512"><div class="ratio">1:1</div><div class="px">512×512</div></button>
+          <button class="size-btn active" data-w="512" data-h="768"><div class="ratio">2:3</div><div class="px">512×768</div></button>
+          <button class="size-btn" data-w="512" data-h="683"><div class="ratio">3:4</div><div class="px">512×683</div></button>
+          <button class="size-btn" data-w="683" data-h="512"><div class="ratio">4:3</div><div class="px">683×512</div></button>
+          <button class="size-btn" data-w="910" data-h="512"><div class="ratio">16:9</div><div class="px">910×512</div></button>
+          <button class="size-btn" data-w="512" data-h="910"><div class="ratio">9:16</div><div class="px">512×910</div></button>
+          <button class="size-btn custom-btn" data-w="0" data-h="0"><div class="ratio">Custom</div><div class="px">手動入力</div></button>
+        </div>
+        <div class="custom-size-row" id="custom-size-row" style="display:none;">
+          <div><label>W (px)</label><input type="number" id="custom-w" value="512" min="64" max="2048"></div>
+          <div><label>H (px)</label><input type="number" id="custom-h" value="512" min="64" max="2048"></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Advanced</div>
+        <div class="field-row"><label>Steps</label><input type="number" id="steps" value="40" min="1" max="150"></div>
+        <div class="field-row"><label>CFG Scale</label><input type="number" id="cfg" value="7" min="1" max="30" step="0.5"></div>
+        <div class="field-row">
+          <label>Sampler</label>
+          <select id="sampler" onchange="setSamplerSettings()">
+            <option value="euler">Euler</option>
+            <option value="euler_ancestral">Euler a</option>
+            <option value="dpmpp_2m" selected>DPM++ 2M</option>
+            <option value="dpmpp_2m_sde">DPM++ 2M SDE</option>
+            <option value="dpmpp_3m_sde">DPM++ 3M SDE</option>
+            <option value="dpmpp_sde">DPM++ SDE</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label>Scheduler</label>
+          <select id="scheduler" onchange="setSamplerSettings()">
+            <option value="normal">Normal</option>
+            <option value="karras" selected>Karras</option>
+            <option value="exponential">Exponential</option>
+            <option value="sgm_uniform">SGM Uniform</option>
+            <option value="simple">Simple</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label>Seed（-1 でランダム）</label>
+          <div class="seed-row">
+            <input type="number" id="seed" value="-1" min="-1">
+            <button class="btn-random" onclick="randomizeSeed()">🎲</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <label>アクセラレーター</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:2px;">
+            <button class="accel-btn active" id="accel-gpu" onclick="setAccel('GPU',this)">
+              <div style="font-size:.72rem;font-weight:500;">⚡ GPU</div>
+              <div style="font-size:.58rem;opacity:.7;">OpenVINO</div>
+            </button>
+            <button class="accel-btn" id="accel-cpu" onclick="setAccel('CPU',this)">
+              <div style="font-size:.72rem;font-weight:500;">&#x1F5A5; CPU</div>
+              <div style="font-size:.58rem;opacity:.7;">互換モード</div>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="generate-section">
+        <div style="margin-bottom:10px;">
+          <label>生成枚数（連続）</label>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;">
+            <button class="count-btn active" id="count-btn-1" onclick="setCount(1,this)"><div class="ratio">1</div></button>
+            <button class="count-btn" id="count-btn-2" onclick="setCount(2,this)"><div class="ratio">2</div></button>
+            <button class="count-btn" id="count-btn-3" onclick="setCount(3,this)"><div class="ratio">3</div></button>
+            <button class="count-btn" id="count-btn-4" onclick="setCount(4,this)"><div class="ratio">4</div></button>
+            <button class="count-btn" id="count-btn-5" onclick="setCount(5,this)"><div class="ratio">5</div></button>
+          </div>
+        </div>
+        <button class="btn-generate" onclick="generate()">Create</button>
+      </div>
+    </div>
+
+    <div class="panel-right">
+      <!-- 生成中プログレス（常時表示エリア） -->
+      <div class="generating-progress" id="generating-progress" style="display:none;">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+        <div class="progress-text" id="progress-text">生成中...</div>
+      </div>
+      <!-- プレースホルダー（未生成時） -->
+      <div class="canvas-placeholder" id="placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;">
+        <img src="logo.png" style="width:180px;object-fit:contain;opacity:0.45;">
+      </div>
+      <!-- 複数画像グリッド -->
+      <div class="result-grid" id="result-grid"></div>
+      <!-- アクションバー（最後の1枚用） -->
+      <div class="result-actions" id="result-actions">
+        <div class="elapsed-display" id="elapsed-display" style="display:none;">生成時間：<span id="elapsed-val">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GALLERY TAB -->
+<div class="tab-content" id="tab-gallery">
+  <div class="gallery-wrap">
+    <div class="gallery-header">
+      <span class="gallery-title">Output Gallery</span>
+      <button class="btn-refresh" onclick="loadGallery(true)">↻ 更新</button>
+    </div>
+    <div class="gallery-grid" id="gallery-grid">
+      <div class="gallery-empty">読み込み中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROMPT NOTES TAB -->
+<div class="tab-content" id="tab-notes">
+  <div class="notes-unified-wrap">
+    <!-- 左パネル：上下2セクション -->
+    <div class="notes-unified-left">
+      <!-- キャラ定義セクション -->
+      <div class="notes-section-block">
+        <div class="notes-list-header">
+          <span class="notes-list-title">🧑 キャラ定義</span>
+          <button class="btn-new-note" onclick="newChara()">+ New</button>
+        </div>
+        <div class="notes-list" id="chara-list"></div>
+      </div>
+      <!-- 仕切り -->
+      <div class="notes-section-divider"></div>
+      <!-- Prompt Notesセクション -->
+      <div class="notes-section-block">
+        <div class="notes-list-header">
+          <span class="notes-list-title">📝 Prompt Notes</span>
+          <button class="btn-new-note" onclick="newNote()">+ New</button>
+        </div>
+        <div class="notes-list" id="notes-list"></div>
+      </div>
+      <!-- 仕切り -->
+      <div class="notes-section-divider"></div>
+      <!-- タグライブラリ -->
+      <div class="notes-section-block">
+        <div class="notes-list-header">
+          <span class="notes-list-title">🏷 タグライブラリ</span>
+          <button class="btn-new-note" onclick="newTagCategory()">+ Cat</button>
+        </div>
+        <div class="notes-list" id="tag-category-list"></div>
+      </div>
+    </div>
+    <!-- 右エディタ：共通 -->
+    <div class="notes-unified-editor">
+      <div id="chara-editor" style="flex:1;display:flex;flex-direction:column;">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+          <span style="color:var(--ink-600);font-size:.72rem;">キャラまたはノートを選択してください</span>
+        </div>
+      </div>
+      <div id="notes-editor" style="display:none;flex:1;flex-direction:column;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE TAB -->
+<div class="tab-content" id="tab-schedule">
+  <div class="schedule-wrap">
+    <div class="schedule-left">
+      <div class="schedule-list-header">
+        <span class="schedule-list-title">Queue</span>
+        <button class="btn-new-note" onclick="newSchedule()">+ Add</button>
+      </div>
+      <div class="schedule-list" id="schedule-list"></div>
+      <div class="schedule-export-area">
+        <button class="btn-export-json" onclick="exportScheduleJSON()">📄 schedule.json を出力</button>
+        <div class="export-note">ダウンロードした schedule.json を<br>お使いのスケジューラに渡してください</div>
+      </div>
+    </div>
+    <div class="schedule-editor" id="schedule-editor">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+        <span style="color:var(--ink-600);font-family:'JetBrains Mono',monospace;font-size:.72rem;">予約を選択または新規追加</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIBRARY -->
+<div class="tab-content" id="tab-library">
+  <div class="library-layout">
+
+    <!-- 左カラム -->
+    <div class="library-main">
+
+      <!-- 上部：プルダウン＋詳細 -->
+      <div class="lib-section">
+        <div class="lib-section-title">モデル図鑑</div>
+        <div class="lib-selects-row">
+          <div class="lib-select-wrap">
+            <label class="lib-select-label">Checkpoint</label>
+            <select id="lib-ckpt-select" onchange="onLibCkptChange()">
+              <option value="">── 選択してください ──</option>
+            </select>
+          </div>
+          <div class="lib-select-wrap">
+            <label class="lib-select-label">LoRA</label>
+            <select id="lib-lora-select" onchange="onLibLoraChange()">
+              <option value="">── 選択してください ──</option>
+            </select>
+          </div>
+        </div>
+        <!-- 詳細表示エリア（2カラム） -->
+        <div class="lib-detail-pair" id="lib-detail-pair">
+          <div class="lib-detail-box" id="lib-ckpt-detail">
+            <div class="lib-detail-placeholder">Checkpointを選択してください</div>
+          </div>
+          <div class="lib-detail-box" id="lib-lora-detail">
+            <div class="lib-detail-placeholder">LoRAを選択してください</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 中部：メモ（2カラム） -->
+      <div class="lib-section lib-memo-pair-section">
+        <div class="lib-memo-pair">
+          <div class="lib-memo-col">
+            <div class="lib-memo-col-label" id="ckpt-memo-label">📝 Checkpoint メモ</div>
+            <textarea class="lib-memo-textarea" id="lib-ckpt-memo"
+              placeholder="Checkpointを選択するとメモが保存できます"
+              oninput="saveLibMemoFromInput('ckpt')"
+              disabled></textarea>
+          </div>
+          <div class="lib-memo-col">
+            <div class="lib-memo-col-label" id="lora-memo-label">📝 LoRA メモ</div>
+            <textarea class="lib-memo-textarea" id="lib-lora-memo"
+              placeholder="LoRAを選択するとメモが保存できます"
+              oninput="saveLibMemoFromInput('lora')"
+              disabled></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 下部：組み合わせメモ -->
+      <div class="lib-section">
+        <div class="lib-section-title">Checkpoint × LoRA 組み合わせメモ</div>
+        <div class="lib-combo-header">
+          <div class="lib-combo-selects">
+            <select id="combo-ckpt-select" onchange="renderComboView()">
+              <option value="">Checkpoint を選択...</option>
+            </select>
+            <span class="lib-combo-x">×</span>
+            <select id="combo-lora-select" onchange="renderComboView()">
+              <option value="">LoRA を選択（任意）...</option>
+            </select>
+          </div>
+          <textarea class="lib-memo-textarea lib-combo-input" id="combo-memo-input"
+            placeholder="どんな結果だったか、Steps・CFG・LoRA強度なども書いておくと再現しやすい..."></textarea>
+          <button class="btn-builder-apply lib-combo-save-btn" onclick="addComboMemo()">＋ メモを保存</button>
+        </div>
+        <div class="lib-combo-list" id="lib-combo-list">
+          <div style="color:var(--ink-600);font-size:.72rem;">まだメモがありません</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 右カラム：tips.md 常時表示 -->
+    <div class="library-sidebar">
+      <div class="lib-tips-label">📌 Tips & 推奨設定</div>
+      <div class="lib-tips-content" id="pinned-checkpoint-content">読み込み中...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="log-bar" id="log-bar">
+  <div class="spinner" id="spinner"></div>
+  <span class="log-prefix">›</span>
+  <span class="log-msg" id="log-msg">ComfyUIへの接続を確認しています...</span>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/comfy.js"></script>
+<script src="js/ollama.js"></script>
+<script src="js/generate.js"></script>
+<script src="js/gallery.js"></script>
+<script src="js/notes.js"></script>
+<script src="js/schedule.js"></script>
+<script src="js/library.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>

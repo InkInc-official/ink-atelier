@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ink Atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #08080e;
+  --black2: #0e0e1a;
+  --surface: rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --amber: #e8a030;
+  --amber-dim: rgba(232,160,48,0.15);
+  --amber-glow: rgba(232,160,48,0.3);
+  --text: #f0ede8;
+  --text2: rgba(240,237,232,0.5);
+  --text3: rgba(240,237,232,0.25);
+  --red: #e05555;
+  --green: #4caf50;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --tab-h: 64px;
+  --header-h: 56px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--black); color: var(--text); font-family: 'DM Mono', monospace; overflow: hidden; }
+
+/* ===== HEADER ===== */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+  background: rgba(8,8,14,0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  z-index: 100;
+}
+.header-logo { display: flex; align-items: center; gap: 10px; }
+.header-logo img { width: 28px; height: 28px; object-fit: contain; }
+.header-title { font-family: 'Shippori Mincho', serif; font-size: 1.1rem; font-weight: 700; color: var(--amber); letter-spacing: .1em; }
+.header-stats { display: flex; gap: 10px; align-items: center; }
+.stat-chip { font-size: .62rem; color: var(--text2); letter-spacing: .04em; }
+.stat-chip span { color: var(--amber); font-weight: 500; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+.status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+/* ===== TABS ===== */
+.tab-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; height: var(--tab-h);
+  background: rgba(8,8,14,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  z-index: 100;
+}
+.tab-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; background: none; border: none; cursor: pointer;
+  color: var(--text3); transition: color .2s;
+  padding: 8px 0;
+}
+.tab-btn.active { color: var(--amber); }
+.tab-btn.active .tab-icon { background: var(--amber-dim); border-color: var(--amber-glow); }
+.tab-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: transparent; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; transition: all .2s;
+}
+.tab-label { font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; }
+
+/* ===== SCROLL AREA ===== */
+.page {
+  position: fixed; top: var(--header-h); left: 0; right: 0;
+  bottom: var(--tab-h);
+  overflow-y: auto; overflow-x: hidden;
+  display: none;
+  -webkit-overflow-scrolling: touch;
+}
+.page.active { display: block; }
+.page-inner { padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.card-label {
+  font-size: .6rem; color: var(--amber); letter-spacing: .1em;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+
+/* ===== FORM ELEMENTS ===== */
+select, textarea, input[type="text"], input[type="number"] {
+  width: 100%; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: .85rem;
+  padding: 12px 14px;
+  outline: none;
+  appearance: none;
+  transition: border-color .2s;
+}
+select:focus, textarea:focus, input:focus { border-color: var(--amber); }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23e8a030' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+textarea { resize: none; min-height: 90px; line-height: 1.6; }
+
+/* ===== FORMAT BUTTONS ===== */
+.format-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fmt-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 10px;
+  text-align: center; cursor: pointer; transition: all .2s;
+  color: var(--text2);
+}
+.fmt-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+.fmt-btn-icon { font-size: 1.2rem; margin-bottom: 4px; }
+.fmt-btn-name { font-size: .72rem; font-weight: 500; display: block; }
+.fmt-btn-detail { font-size: .6rem; opacity: .6; display: block; margin-top: 2px; }
+
+/* ===== COUNT BUTTONS ===== */
+.count-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cnt-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 0;
+  text-align: center; cursor: pointer; transition: all .2s;
+  color: var(--text2); font-size: .85rem;
+}
+.cnt-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+
+/* ===== CREATE BUTTON ===== */
+.create-btn {
+  width: 100%; padding: 18px;
+  background: linear-gradient(135deg, #e8a030, #c87820);
+  border: none; border-radius: var(--radius);
+  color: #08080e; font-family: 'Shippori Mincho', serif;
+  font-size: 1.1rem; font-weight: 700; letter-spacing: .15em;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: opacity .2s, transform .1s;
+  box-shadow: 0 4px 20px var(--amber-glow);
+}
+.create-btn:active { transform: scale(0.98); opacity: .9; }
+.create-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* ===== PROGRESS ===== */
+.progress-card { display: none; }
+.progress-card.visible { display: block; }
+.progress-bar-bg { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--amber); border-radius: 2px; width: 0; transition: width .3s; }
+.progress-text { font-size: .68rem; color: var(--text2); margin-top: 8px; text-align: center; }
+.elapsed-text { font-size: .62rem; color: var(--text3); text-align: center; margin-top: 4px; }
+
+/* ===== RESULT ===== */
+.result-area { display: flex; flex-direction: column; gap: 12px; }
+.result-img-wrap {
+  width: 100%; border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  min-height: 200px; display: flex; align-items: center; justify-content: center;
+}
+.result-img-wrap img { width: 100%; height: auto; display: block; border-radius: var(--radius); }
+.result-placeholder { color: var(--text3); font-size: .75rem; text-align: center; padding: 40px; }
+.result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.result-action-btn {
+  padding: 13px; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  color: var(--text); font-size: .75rem; cursor: pointer; text-align: center;
+  transition: all .2s;
+}
+.result-action-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+/* ===== GALLERY ===== */
+.gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gallery-item {
+  border-radius: var(--radius-sm); overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  aspect-ratio: 2/3;
+  cursor: pointer; transition: border-color .2s;
+}
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-item:active { border-color: var(--amber); }
+.gallery-empty { text-align: center; color: var(--text3); font-size: .8rem; padding: 60px 0; grid-column: 1/-1; }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+  z-index: 200; display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal-img { max-width: 100%; max-height: 80vh; border-radius: var(--radius); object-fit: contain; }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); border: 1px solid var(--border2);
+  color: var(--text); font-size: 1.2rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== LIBRARY ===== */
+.lib-select-group { display: flex; flex-direction: column; gap: 6px; }
+.lib-select-label { font-size: .62rem; color: var(--text2); }
+.lib-detail-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px;
+  display: none;
+}
+.lib-detail-card.visible { display: block; }
+.lib-detail-name { font-family: 'Shippori Mincho', serif; font-size: .95rem; color: var(--amber); margin-bottom: 10px; }
+.lib-detail-row { display: grid; grid-template-columns: 72px 1fr; gap: 4px 10px; font-size: .72rem; margin-bottom: 2px; }
+.lib-detail-key { color: var(--text3); }
+.lib-detail-val { color: var(--text); line-height: 1.5; }
+
+/* ===== LOG ===== */
+.log-bar {
+  position: fixed; bottom: calc(var(--tab-h) + 8px); left: 16px; right: 16px;
+  background: rgba(8,8,14,0.95); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 14px;
+  font-size: .68rem; color: var(--text2);
+  z-index: 90; display: none;
+  backdrop-filter: blur(10px);
+}
+.log-bar.visible { display: block; }
+.log-bar.error { border-color: var(--red); color: var(--red); }
+.log-bar.success { border-color: var(--green); color: var(--green); }
+
+/* ===== ACCEL ===== */
+.accel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.accel-btn {
+  padding: 12px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text2);
+  font-size: .72rem; text-align: center; cursor: pointer; transition: all .2s;
+}
+.accel-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+
+/* ===== SEED ===== */
+.seed-row { display: flex; gap: 8px; align-items: center; }
+.seed-row input { flex: 1; }
+.seed-dice {
+  width: 44px; height: 44px; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; cursor: pointer; flex-shrink: 0; transition: border-color .2s;
+}
+.seed-dice:active { border-color: var(--amber); }
+
+/* ===== TIPS ===== */
+.tips-content { font-size: .72rem; line-height: 1.7; color: var(--text2); }
+.tips-content h1,.tips-content h2 { color: var(--text); font-size: .8rem; margin: 12px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.tips-content h3 { color: var(--amber); font-size: .75rem; margin: 8px 0 4px; }
+.tips-content table { width: 100%; border-collapse: collapse; font-size: .68rem; margin: 6px 0; }
+.tips-content th { background: var(--surface2); color: var(--amber); padding: 6px 8px; text-align: left; }
+.tips-content td { padding: 6px 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+.tips-content ul { padding-left: 1.2em; margin: 4px 0; }
+.tips-content li { margin: 3px 0; }
+.tips-content strong { color: var(--text); }
+.tips-content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+/* ===== GALLERY HEADER ===== */
+.gallery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.gallery-header-title { font-size: .7rem; color: var(--text2); }
+.refresh-btn {
+  padding: 8px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text2); font-size: .7rem; cursor: pointer;
+}
+
+/* ===== SECTION DIVIDER ===== */
+.section-divider { height: 1px; background: var(--border); }
+
+/* ===== LOCK OVERLAY ===== */
+.lock-overlay {
+  position: fixed; inset: 0; background: rgba(8,8,14,0.96);
+  backdrop-filter: blur(20px); z-index: 300;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px;
+}
+.lock-overlay.active { display: flex; }
+.lock-logo { width: 72px; height: 72px; object-fit: contain; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
+.lock-title { font-family: 'Shippori Mincho', serif; font-size: 1.4rem; color: var(--amber); letter-spacing: .15em; }
+.lock-count { font-size: .75rem; color: var(--text2); display: none; }
+.lock-progress-wrap { width: 240px; }
+.lock-progress-bg { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+.lock-progress-fill { height: 100%; background: var(--amber); border-radius: 1px; width: 0; transition: width .3s; }
+.lock-step-text { font-size: .68rem; color: var(--text2); text-align: center; margin-top: 8px; }
+.lock-elapsed { font-size: .65rem; color: var(--text3); }
+.lock-abort {
+  padding: 8px 20px; background: transparent;
+  border: 1px solid rgba(224,85,85,0.4); border-radius: var(--radius-sm);
+  color: rgba(224,85,85,0.6); font-size: .68rem; cursor: pointer; margin-top: 4px;
+  transition: all .2s;
+}
+.lock-abort:hover { border-color: var(--red); color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <img src="icon.png" alt="">
+    <span class="header-title">Ink Atelier</span>
+  </div>
+  <div class="header-stats">
+    <span class="stat-chip">Stock <span id="m-stock">—</span></span>
+    <div class="status-dot offline" id="m-status-dot" title="ComfyUI"></div>
+  </div>
+</div>
+
+<!-- GENERATE PAGE -->
+<div class="page active" id="page-generate">
+  <div class="page-inner">
+
+    <!-- FORMAT -->
+    <div class="card">
+      <div class="card-label">Format</div>
+      <div class="format-grid" id="m-format-grid">
+        <button class="fmt-btn active" data-key="tachie" onclick="mApplyFormat('tachie',this)">
+          <div class="fmt-btn-icon">🖼</div>
+          <span class="fmt-btn-name">立ち絵</span>
+          <span class="fmt-btn-detail">768×1152 / 32steps</span>
+        </button>
+        <button class="fmt-btn" data-key="sd" onclick="mApplyFormat('sd',this)">
+          <div class="fmt-btn-icon">🐣</div>
+          <span class="fmt-btn-name">SD</span>
+          <span class="fmt-btn-detail">600×600 / 30steps</span>
+        </button>
+        <button class="fmt-btn" data-key="illust_v" onclick="mApplyFormat('illust_v',this)">
+          <div class="fmt-btn-icon">🎨</div>
+          <span class="fmt-btn-name">一枚絵 縦</span>
+          <span class="fmt-btn-detail">832×1216 / 35steps</span>
+        </button>
+        <button class="fmt-btn" data-key="illust_h" onclick="mApplyFormat('illust_h',this)">
+          <div class="fmt-btn-icon">🏞</div>
+          <span class="fmt-btn-name">一枚絵 横</span>
+          <span class="fmt-btn-detail">1216×832 / 35steps</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MODEL -->
+    <div class="card">
+      <div class="card-label">Model</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <select id="m-checkpoint"><option value="">読み込み中...</option></select>
+        <select id="m-lora"><option value="">LoRA なし</option></select>
+      </div>
+    </div>
+
+    <!-- PROMPT -->
+    <div class="card">
+      <div class="card-label">Prompt</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <textarea id="m-positive" rows="4" placeholder="Positive prompt...">masterpiece, best quality, 1male, solo, black long wavy hair, black lion ears, black lion tail, black japanese kimono, blue eyes, black boots, full body, holding large calligraphy brush, facing viewer, white background</textarea>
+        <textarea id="m-negative" rows="3" placeholder="Negative prompt...">lowres, bad anatomy, bad hands, missing fingers, extra fingers, blurry, worst quality, low quality, female, girl</textarea>
+      </div>
+    </div>
+
+    <!-- ADVANCED -->
+    <div class="card">
+      <div class="card-label">Advanced</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div class="lib-select-label" style="margin-bottom:6px;">Seed（-1 でランダム）</div>
+          <div class="seed-row">
+            <input type="number" id="m-seed" value="-1">
+            <div class="seed-dice" onclick="mRandomSeed()">🎲</div>
+          </div>
+        </div>
+        <div>
+          <div class="lib-select-label" style="margin-bottom:6px;">アクセラレーター</div>
+          <div class="accel-row">
+            <div class="accel-btn active" id="m-accel-gpu" onclick="mSetAccel('GPU',this)">⚡ GPU<br><span style="font-size:.6rem;opacity:.6;">OpenVINO</span></div>
+            <div class="accel-btn" id="m-accel-cpu" onclick="mSetAccel('CPU',this)">🖥 CPU<br><span style="font-size:.6rem;opacity:.6;">互換モード</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COUNT & CREATE -->
+    <div class="card">
+      <div class="card-label" style="margin-bottom:10px;">生成枚数（連続）</div>
+      <div class="count-row" style="margin-bottom:14px;">
+        <div class="cnt-btn active" onclick="mSetCount(1,this)">1</div>
+        <div class="cnt-btn" onclick="mSetCount(2,this)">2</div>
+        <div class="cnt-btn" onclick="mSetCount(3,this)">3</div>
+        <div class="cnt-btn" onclick="mSetCount(4,this)">4</div>
+        <div class="cnt-btn" onclick="mSetCount(5,this)">5</div>
+      </div>
+      <button class="create-btn" id="m-create-btn" onclick="mGenerate()">Create</button>
+    </div>
+
+    <!-- RESULT -->
+    <div class="card result-area" id="m-result-area" style="display:none;">
+      <div class="card-label">Result</div>
+      <div class="result-img-wrap" id="m-result-wrap">
+        <div class="result-placeholder">生成完了後に表示されます</div>
+      </div>
+      <div class="result-actions">
+        <div class="result-action-btn" onclick="mSaveResult()">💾 保存</div>
+        <div class="result-action-btn" onclick="mBgRemove()">✂ 背景透過</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- GALLERY PAGE -->
+<div class="page" id="page-gallery">
+  <div class="page-inner">
+    <div class="gallery-header">
+      <span class="gallery-header-title">OUTPUT GALLERY</span>
+      <div class="refresh-btn" onclick="mLoadGallery()">↻ 更新</div>
+    </div>
+    <div class="gallery-grid" id="m-gallery-grid">
+      <div class="gallery-empty">ギャラリーを読み込み中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- LIBRARY PAGE -->
+<div class="page" id="page-library">
+  <div class="page-inner">
+
+    <div class="card">
+      <div class="card-label">Checkpoint 図鑑</div>
+      <div class="lib-select-group">
+        <select id="m-lib-ckpt" onchange="mOpenLibCkpt()">
+          <option value="">── 選択してください ──</option>
+        </select>
+      </div>
+      <div class="lib-detail-card" id="m-lib-ckpt-detail" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">LoRA 図鑑</div>
+      <div class="lib-select-group">
+        <select id="m-lib-lora" onchange="mOpenLibLora()">
+          <option value="">── 選択してください ──</option>
+        </select>
+      </div>
+      <div class="lib-detail-card" id="m-lib-lora-detail" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Tips & 推奨設定</div>
+      <div class="tips-content" id="m-tips-content">読み込み中...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="mSwitchTab('generate',this)">
+    <div class="tab-icon">🎨</div>
+    <span class="tab-label">Generate</span>
+  </button>
+  <button class="tab-btn" onclick="mSwitchTab('gallery',this)">
+    <div class="tab-icon">🖼</div>
+    <span class="tab-label">Gallery</span>
+  </button>
+  <button class="tab-btn" onclick="mSwitchTab('library',this)">
+    <div class="tab-icon">📖</div>
+    <span class="tab-label">Library</span>
+  </button>
+</div>
+
+<!-- LOCK OVERLAY -->
+<div class="lock-overlay" id="m-lock">
+  <img src="icon.png" class="lock-logo" alt="">
+  <div class="lock-title">Ink Atelier</div>
+  <div class="lock-count" id="m-lock-count"></div>
+  <div style="color:rgba(240,237,232,.4);font-size:.72rem;">生成中です。しばらくお待ちください...</div>
+  <div class="lock-progress-wrap">
+    <div class="lock-progress-bg"><div class="lock-progress-fill" id="m-lock-fill"></div></div>
+    <div class="lock-step-text" id="m-lock-step">接続中...</div>
+  </div>
+  <div class="lock-elapsed">経過時間：<span id="m-lock-elapsed">0.0s</span></div>
+  <button class="lock-abort" onclick="mAbort()">■ 中止</button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="m-modal" onclick="mCloseModal()">
+  <button class="modal-close" onclick="mCloseModal()">✕</button>
+  <img class="modal-img" id="m-modal-img" src="" alt="">
+</div>
+
+<!-- LOG BAR -->
+<div class="log-bar" id="m-log"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const COMFYUI = 'http://localhost:8188';
+const OLLAMA  = 'http://localhost:11434';
+
+const FORMAT_PRESETS = {
+  tachie:   { w:768,  h:1152, steps:32, cfg:7, sampler:'dpmpp_2m', scheduler:'karras' },
+  sd:       { w:600,  h:600,  steps:30, cfg:7, sampler:'dpmpp_2m', scheduler:'karras' },
+  illust_v: { w:832,  h:1216, steps:35, cfg:6, sampler:'dpmpp_2m', scheduler:'karras' },
+  illust_h: { w:1216, h:832,  steps:35, cfg:6, sampler:'dpmpp_2m', scheduler:'karras' }
+};
+
+let mCurrentFormat = FORMAT_PRESETS.tachie;
+let mGenerateCount = 1;
+let mAccel = 'GPU';
+let mWs = null;
+let mWsCompleted = false;
+let mGenerateResolve = null;
+let mGenerateReject  = null;
+let mAbortRequested  = false;
+let mCurrentPid      = null;
+let mSessionId       = null;
+let mElapsedTimer    = null;
+let mElapsedSec      = 0;
+let mLastImageData   = null;
+let mLibCkpts        = [];
+let mLibLoras        = [];
+let mLibLoaded       = false;
+let mHiddenItems     = JSON.parse(localStorage.getItem('ink_hidden')||'[]');
+
+function newClientId(){ return 'ink-m-'+Date.now()+'-'+Math.random().toString(36).slice(2,6); }
+
+// ===== LOG =====
+let mLogTimer = null;
+function mLog(msg, type=''){
+  const el = document.getElementById('m-log');
+  el.textContent = msg;
+  el.className = 'log-bar visible' + (type?' '+type:'');
+  clearTimeout(mLogTimer);
+  if(msg) mLogTimer = setTimeout(()=>{ el.className='log-bar'; }, 4000);
+}
+
+// ===== STATUS =====
+async function mCheckStatus(){
+  try{
+    const res = await fetch(`${COMFYUI}/system_stats`, {signal: AbortSignal.timeout(3000)});
+    document.getElementById('m-status-dot').className = res.ok ? 'status-dot' : 'status-dot offline';
+    if(res.ok){ await mLoadModels(); await mLoadGallery(); }
+  } catch(e){ document.getElementById('m-status-dot').className = 'status-dot offline'; }
+}
+
+// ===== MODELS =====
+async function mLoadModels(){
+  try{
+    const res = await fetch(`${COMFYUI}/object_info/CheckpointLoaderSimple`);
+    const data = await res.json();
+    const ckpts = data.CheckpointLoaderSimple.input.required.ckpt_name[0];
+    const sel = document.getElementById('m-checkpoint');
+    sel.innerHTML = ckpts.map(c=>`<option value="${c}">${c}</option>`).join('');
+  }catch(e){}
+  try{
+    const res = await fetch(`${COMFYUI}/object_info/LoraLoader`);
+    const data = await res.json();
+    const loras = data.LoraLoader.input.required.lora_name[0];
+    const sel = document.getElementById('m-lora');
+    sel.innerHTML = '<option value="">LoRA なし</option>' + loras.map(l=>`<option value="${l}">${l}</option>`).join('');
+  }catch(e){}
+}
+
+// ===== GALLERY =====
+async function mLoadGallery(){
+  const grid = document.getElementById('m-gallery-grid');
+  grid.innerHTML = '<div class="gallery-empty">読み込み中...</div>';
+  try{
+    const res = await fetch(`${COMFYUI}/history?max_items=60`);
+    const data = await res.json();
+    const items = [];
+    for(const pid in data){
+      const outputs = data[pid]?.outputs || {};
+      for(const nodeId in outputs){
+        const imgs = outputs[nodeId]?.images || [];
+        imgs.forEach(img=>{ if(!mHiddenItems.includes(img.filename)) items.push(img); });
+      }
+    }
+    items.reverse();
+    if(!items.length){ grid.innerHTML='<div class="gallery-empty">画像がありません</div>'; return; }
+    // 存在確認して表示
+    const checks = await Promise.all(items.slice(0,40).map(async img=>{
+      try{
+        const r = await fetch(`${COMFYUI}/view?filename=${img.filename}&subfolder=${img.subfolder||''}&type=output`,{method:'HEAD'});
+        return r.ok ? img : null;
+      }catch(){ return null; }
+    }));
+    const valid = checks.filter(Boolean);
+    if(!valid.length){ grid.innerHTML='<div class="gallery-empty">画像がありません</div>'; return; }
+    document.getElementById('m-stock').textContent = valid.length;
+    grid.innerHTML = valid.map(img=>{
+      const url = `${COMFYUI}/view?filename=${img.filename}&subfolder=${img.subfolder||''}&type=output`;
+      return `<div class="gallery-item" onclick="mOpenModal('${url}')"><img src="${url}" loading="lazy" alt=""></div>`;
+    }).join('');
+  }catch(e){ grid.innerHTML='<div class="gallery-empty">読み込みエラー</div>'; }
+}
+
+// ===== TAB =====
+function mSwitchTab(tab, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if(tab==='gallery') mLoadGallery();
+  if(tab==='library' && !mLibLoaded) mLoadLibrary();
+}
+
+// ===== FORMAT =====
+function mApplyFormat(key, btn){
+  mCurrentFormat = FORMAT_PRESETS[key];
+  document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== COUNT =====
+function mSetCount(n, btn){
+  mGenerateCount = n;
+  document.querySelectorAll('.cnt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== ACCEL =====
+function mSetAccel(mode, btn){
+  mAccel = mode;
+  document.querySelectorAll('.accel-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== SEED =====
+function mRandomSeed(){
+  document.getElementById('m-seed').value = Math.floor(Math.random()*9999999999);
+}
+
+// ===== LOCK =====
+function mShowLock(){ document.getElementById('m-lock').classList.add('active'); }
+function mHideLock(){ document.getElementById('m-lock').classList.remove('active'); }
+function mUpdateLockStep(text){ document.getElementById('m-lock-step').textContent = text; }
+function mUpdateLockFill(pct){ document.getElementById('m-lock-fill').style.width = pct+'%'; }
+function mStartElapsed(){
+  mElapsedSec = 0;
+  clearInterval(mElapsedTimer);
+  mElapsedTimer = setInterval(()=>{
+    mElapsedSec += 0.1;
+    document.getElementById('m-lock-elapsed').textContent = mElapsedSec.toFixed(1)+'s';
+  }, 100);
+}
+function mStopElapsed(){ clearInterval(mElapsedTimer); return mElapsedSec.toFixed(1)+'s'; }
+
+// ===== WORKFLOW =====
+function mBuildWorkflow(){
+  const ckpt = document.getElementById('m-checkpoint').value;
+  const pos  = document.getElementById('m-positive').value;
+  const neg  = document.getElementById('m-negative').value;
+  const lora = document.getElementById('m-lora').value;
+  const seedRaw = parseInt(document.getElementById('m-seed').value);
+  const seed = seedRaw===-1 ? Math.floor(Math.random()*9999999999) : seedRaw;
+  const { w, h, steps, cfg, sampler, scheduler } = mCurrentFormat;
+  const useGPU = mAccel === 'GPU';
+  const wf = {
+    "4":{ inputs:{ckpt_name:ckpt}, class_type:"CheckpointLoaderSimple" },
+    "5":{ inputs:{width:w, height:h, batch_size:1}, class_type:"EmptyLatentImage" },
+    "6":{ inputs:{text:pos, clip:lora?["18",1]:["4",1]}, class_type:"CLIPTextEncode" },
+    "7":{ inputs:{text:neg, clip:lora?["18",1]:["4",1]}, class_type:"CLIPTextEncode" },
+    "3":{ inputs:{seed, steps, cfg, sampler_name:sampler, scheduler, denoise:1,
+            model:lora?["18",0]:(useGPU?["17",0]:["4",0]),
+            positive:["6",0], negative:["7",0], latent_image:["5",0]},
+          class_type:"KSampler" },
+    "8":{ inputs:{samples:["3",0], vae:["4",2]}, class_type:"VAEDecode" },
+    "9":{ inputs:{filename_prefix:"InkAtelierM", images:["8",0]}, class_type:"SaveImage" }
+  };
+  if(useGPU) wf["17"] = { inputs:{device:"GPU", model:["4",0]}, class_type:"TorchCompileDiffusionOpenVINO" };
+  if(lora)   wf["18"] = { inputs:{lora_name:lora, strength_model:1.0, strength_clip:1.0,
+                            model:useGPU?["17",0]:["4",0], clip:["4",1]}, class_type:"LoraLoader" };
+  return wf;
+}
+
+// ===== WS =====
+function mListenProgress(pid){
+  mWsCompleted = false;
+  if(mWs) try{ mWs.close(); }catch(e){}
+  mWs = new WebSocket(`${COMFYUI.replace(/^http/,"ws")}/ws?clientId=${mSessionId}`);
+  mWs.onmessage = async(event)=>{
+    try{
+      const msg = JSON.parse(event.data);
+      if(msg.type==='progress'){
+        const pct = Math.round((msg.data.value/msg.data.max)*100);
+        mUpdateLockFill(pct);
+        mUpdateLockStep(`ステップ ${msg.data.value} / ${msg.data.max}  (${pct}%)`);
+      }
+      if(msg.type==='executing' && msg.data.node===null && msg.data.prompt_id===pid){
+        if(!mWsCompleted){ mWsCompleted=true; await mFetchResult(pid); }
+      }
+    }catch(e){}
+  };
+}
+
+// ===== POLL =====
+async function mPollResult(pid, attempts=0){
+  if(mWsCompleted) return;
+  if(attempts>1800){ if(!mWsCompleted){ mLog('タイムアウト','error'); mHideLock(); } return; }
+  try{
+    const res = await fetch(`${COMFYUI}/history/${pid}`);
+    const data = await res.json();
+    if(data[pid]?.outputs && Object.keys(data[pid].outputs).length>0){
+      if(!mWsCompleted){ mWsCompleted=true; await mFetchResult(pid); }
+    } else { setTimeout(()=>mPollResult(pid,attempts+1),3000); }
+  }catch(e){ setTimeout(()=>mPollResult(pid,attempts+1),3000); }
+}
+
+// ===== FETCH RESULT =====
+async function mFetchResult(pid){
+  try{
+    const res = await fetch(`${COMFYUI}/history/${pid}`);
+    const data = await res.json();
+    const outputs = data[pid]?.outputs || {};
+    let imgInfo = null;
+    for(const node in outputs){
+      const imgs = outputs[node]?.images || [];
+      if(imgs.length) { imgInfo = imgs[0]; break; }
+    }
+    if(!imgInfo) throw new Error('画像なし');
+    const imgUrl = `${COMFYUI}/view?filename=${imgInfo.filename}&subfolder=${imgInfo.subfolder||''}&type=output`;
+    const imgRes = await fetch(imgUrl);
+    const blob = await imgRes.blob();
+    mLastImageData = URL.createObjectURL(blob);
+    // 結果表示
+    const area = document.getElementById('m-result-area');
+    const wrap = document.getElementById('m-result-wrap');
+    area.style.display = 'flex';
+    wrap.innerHTML = `<img src="${mLastImageData}" alt="生成結果">`;
+    const elapsed = mStopElapsed();
+    mHideLock();
+    document.getElementById('m-create-btn').disabled = false;
+    mLog(`生成完了 (${elapsed})`,'success');
+    if(mGenerateResolve){ mGenerateResolve(); mGenerateResolve=null; }
+    // ページをGenerateの結果までスクロール
+    area.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(e){
+    mLog('画像取得エラー: '+e.message,'error');
+    if(mGenerateReject){ mGenerateReject(e.message); mGenerateReject=null; }
+  }
+}
+
+// ===== GENERATE =====
+async function mGenerate(){
+  mAbortRequested = false;
+  const btn = document.getElementById('m-create-btn');
+  btn.disabled = true;
+  mShowLock(); mStartElapsed();
+  document.getElementById('m-result-area').style.display='none';
+
+  for(let gi=1; gi<=mGenerateCount; gi++){
+    if(mAbortRequested) break;
+    const countEl = document.getElementById('m-lock-count');
+    if(mGenerateCount>1){ countEl.style.display='block'; countEl.textContent=`${gi} / ${mGenerateCount}`; }
+    mUpdateLockFill(0); mUpdateLockStep('送信中...');
+    try{
+      const wf = mBuildWorkflow();
+      mSessionId = newClientId();
+      const res = await fetch(`${COMFYUI}/prompt`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({prompt:wf, client_id:mSessionId})
+      });
+      if(!res.ok){ let b=''; try{b=await res.text();}catch(_){} throw new Error(`${res.status}: ${b.slice(0,80)}`); }
+      const data = await res.json();
+      if(!data?.prompt_id) throw new Error('prompt_idなし');
+      mCurrentPid = data.prompt_id;
+      mUpdateLockStep(`送信完了 [${mCurrentPid.slice(0,8)}...]`);
+      mWsCompleted = false;
+      mListenProgress(mCurrentPid);
+      mPollResult(mCurrentPid, 0);
+      await new Promise((resolve, reject)=>{
+        const timeout = setTimeout(()=>reject(new Error('タイムアウト')), 5400000);
+        mGenerateResolve = ()=>{ clearTimeout(timeout); resolve(); };
+        mGenerateReject  = (msg)=>{ clearTimeout(timeout); reject(new Error(msg)); };
+      });
+      if(gi<mGenerateCount) await new Promise(r=>setTimeout(r,2000));
+    }catch(e){
+      mLog('エラー: '+e.message,'error');
+      mHideLock(); mStopElapsed(); btn.disabled=false; return;
+    }
+  }
+  btn.disabled=false;
+}
+
+// ===== ABORT =====
+async function mAbort(){
+  if(!confirm('生成を中止しますか？')) return;
+  mAbortRequested = true;
+  if(mCurrentPid){
+    try{ await fetch(`${COMFYUI}/queue`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delete:[mCurrentPid]})}); }catch(e){}
+  }
+  if(mWs) try{ mWs.close(); }catch(e){}
+  if(mGenerateReject){ mGenerateReject('中止'); mGenerateReject=null; }
+  mHideLock(); mStopElapsed();
+  document.getElementById('m-create-btn').disabled=false;
+  mLog('生成を中止しました','error');
+}
+
+// ===== SAVE =====
+function mSaveResult(){
+  if(!mLastImageData) return;
+  const a = document.createElement('a');
+  a.href = mLastImageData;
+  a.download = `InkAtelierM_${Date.now()}.png`;
+  a.click();
+}
+
+// ===== BG REMOVE =====
+async function mBgRemove(){
+  if(!mLastImageData) return;
+  mLog('背景透過処理中...','');
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0);
+      const d = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const px = d.data;
+      const corners = [
+        [px[0],px[1],px[2]],
+        [px[(canvas.width-1)*4],px[(canvas.width-1)*4+1],px[(canvas.width-1)*4+2]],
+        [px[(canvas.height-1)*canvas.width*4],px[(canvas.height-1)*canvas.width*4+1],px[(canvas.height-1)*canvas.width*4+2]],
+      ];
+      const bgR=Math.round(corners.reduce((s,c)=>s+c[0],0)/3);
+      const bgG=Math.round(corners.reduce((s,c)=>s+c[1],0)/3);
+      const bgB=Math.round(corners.reduce((s,c)=>s+c[2],0)/3);
+      for(let i=0;i<px.length;i+=4){
+        if(Math.abs(px[i]-bgR)<35 && Math.abs(px[i+1]-bgG)<35 && Math.abs(px[i+2]-bgB)<35) px[i+3]=0;
+      }
+      ctx.putImageData(d,0,0);
+      const a=document.createElement('a');
+      a.href=canvas.toDataURL('image/png');
+      a.download=`InkAtelierM_nobg_${Date.now()}.png`;
+      a.click();
+      mLog('背景透過完了','success');
+      resolve();
+    };
+    img.src = mLastImageData;
+  });
+}
+
+// ===== MODAL =====
+function mOpenModal(src){
+  document.getElementById('m-modal-img').src = src;
+  document.getElementById('m-modal').classList.add('active');
+}
+function mCloseModal(){ document.getElementById('m-modal').classList.remove('active'); }
+
+// ===== LIBRARY =====
+function mParseMd(md){
+  const models = [];
+  const blocks = md.split(/^#### /m).slice(1);
+  for(const block of blocks){
+    const lines = block.trim().split('\n');
+    const name = lines[0].trim();
+    const fields = {};
+    for(const line of lines.slice(1)){
+      const m = line.match(/^- \*\*(.+?)\*\*[：:]\s*(.+)/);
+      if(m) fields[m[1].trim()] = m[2].trim();
+    }
+    models.push({name, fields});
+  }
+  return models;
+}
+
+async function mLoadLibrary(){
+  try{
+    const r1 = await fetch('./checkpoints_guide.md');
+    if(r1.ok){ mLibCkpts = mParseMd(await r1.text()); }
+    const r2 = await fetch('./lora_guide.md');
+    if(r2.ok){ mLibLoras = mParseMd(await r2.text()); }
+    const r3 = await fetch('./tips.md');
+    if(r3.ok){
+      const el = document.getElementById('m-tips-content');
+      el.innerHTML = marked.parse(await r3.text());
+    }
+    // プルダウン構築
+    const cs = document.getElementById('m-lib-ckpt');
+    cs.innerHTML = '<option value="">── 選択してください ──</option>' +
+      mLibCkpts.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+    const ls = document.getElementById('m-lib-lora');
+    ls.innerHTML = '<option value="">── 選択してください ──</option>' +
+      mLibLoras.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+    mLibLoaded = true;
+  }catch(e){ mLog('Library読み込みエラー','error'); }
+}
+
+function mRenderDetail(box, model){
+  const html = Object.entries(model.fields).map(([k,v])=>
+    `<div class="lib-detail-row"><div class="lib-detail-key">${k}</div><div class="lib-detail-val">${v}</div></div>`
+  ).join('');
+  box.innerHTML = `<div class="lib-detail-name">${model.name}</div>${html}`;
+  box.classList.add('visible');
+}
+
+function mOpenLibCkpt(){
+  const name = document.getElementById('m-lib-ckpt').value;
+  const box = document.getElementById('m-lib-ckpt-detail');
+  if(!name){ box.classList.remove('visible'); return; }
+  const m = mLibCkpts.find(x=>x.name===name);
+  if(m) mRenderDetail(box, m);
+}
+
+function mOpenLibLora(){
+  const name = document.getElementById('m-lib-lora').value;
+  const box = document.getElementById('m-lib-lora-detail');
+  if(!name){ box.classList.remove('visible'); return; }
+  const m = mLibLoras.find(x=>x.name===name);
+  if(m) mRenderDetail(box, m);
+}
+
+// ===== INIT =====
+mCheckStatus();
+</script>
+</body>
+</html>
