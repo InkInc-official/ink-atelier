@@ -41,6 +41,8 @@ Ink Atelier は ComfyUI の API をバックエンドとして動作する Web �
 > Checkpoint / LoRA などのモデルファイルは同梱していません。各自で ComfyUI に用意してください。
 >
 > 画面の「GPU」モードは ComfyUI の OpenVINO 用ノード（`TorchCompileDiffusionOpenVINO`）を使います。導入していない環境では「CPU」モードに切り替えてください。
+>
+> 画面の「GPU」モードは ComfyUI の OpenVINO 用ノード（`TorchCompileDiffusionOpenVINO`）を使います。導入していない環境では「CPU」モードに切り替えてください。
 
 ---
 
@@ -116,6 +118,21 @@ MIT License（表記義務付き）。詳細は [LICENSE](./LICENSE) を参照�
   `Based on Ink Atelier by Ink Inc. (https://github.com/InkInc-official/ink-atelier)`
   の表記を残してください（README・About 画面・ドキュメントなど場所は自由です）。
 - `logo.png` / `icon.png` はライセンス対象外です。使っても使わなくても構いませんが、ご自身のプロジェクトのブランドとしては使用しないでください。
+
+---
+
+## Library タブ（任意）
+
+Library タブは、`index.html` と同じフォルダに置いた次の Markdown ファイルを読み込んで表示します。
+**これらのファイルは同梱していません。** 必要な人が自分で用意してください。ファイルがなくても他の機能は動作します（Library タブに「見つかりません」と表示されるだけです）。
+
+| ファイル | 表示される場所 |
+|---|---|
+| `tips.md` | Library 上部のピン留め欄（自分用のメモ・推奨設定など） |
+| `checkpoints_guide.md` | Checkpoint 図鑑 |
+| `lora_guide.md` | LoRA 図鑑 |
+
+図鑑ファイルの書式は、1項目ごとに `#### 名前` の見出しと `- **項目名**：内容` の箇条書きを並べる形です。細かい解釈は `js/library.js` を参照してください。
 
 ---
 
