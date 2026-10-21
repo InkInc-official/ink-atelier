@@ -41,8 +41,6 @@ Ink Atelier は ComfyUI の API をバックエンドとして動作する Web �
 > Checkpoint / LoRA などのモデルファイルは同梱していません。各自で ComfyUI に用意してください。
 >
 > 画面の「GPU」モードは ComfyUI の OpenVINO 用ノード（`TorchCompileDiffusionOpenVINO`）を使います。導入していない環境では「CPU」モードに切り替えてください。
->
-> 画面の「GPU」モードは ComfyUI の OpenVINO 用ノード（`TorchCompileDiffusionOpenVINO`）を使います。導入していない環境では「CPU」モードに切り替えてください。
 
 ---
 
